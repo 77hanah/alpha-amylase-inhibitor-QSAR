@@ -1,0 +1,13 @@
+joblib==1.5.2
+joblib==1.4.2
+matplotlib==3.7.2
+numpy==2.4.4
+pandas==2.0.3
+rdkit==2025.9.3
+rdkit==2025.9.6
+scienceplots==2.2.0
+scienceplots==2.2.1
+scikit_learn==1.8.0
+scipy==1.17.1
+seaborn==0.13.2
+tqdm==4.67.1

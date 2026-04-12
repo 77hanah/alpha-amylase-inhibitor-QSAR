@@ -1,0 +1,19 @@
+# === 输入/输出文件 ===
+receptor = receptor.pdbqt
+ligand = ligand_N11.pdbqt
+out = output_N11.pdbqt
+
+# === 对接盒子设置 (完全参照文献2.11节) ===
+# 中心坐标
+center_x = 9.33
+center_y = 25.91
+center_z = 44.74
+
+# 盒子尺寸 (单位: 埃)
+size_x = 70
+size_y = 70
+size_z = 70
+
+# === 计算精度 ===
+exhaustiveness = 8
+num_modes = 9
