@@ -29,7 +29,7 @@ if __name__ == "__main__":
     
     print(f"\n分子描述符已保存到 '{output_file}'")  
 
-    # ===数据清洗===
+    # ===数据处理===
     X_train, X_test, y_train, y_test = data_processor()
 
     # ===PCA===
@@ -45,13 +45,16 @@ if __name__ == "__main__":
     X_test = pd.read_csv(os.path.join(DATA_FOLDER, 'X_test.csv'))
     y_test = pd.read_csv(os.path.join(DATA_FOLDER, 'y_test.csv')).squeeze("columns")
 
+    scaler_y = joblib.load(os.path.join(OUTPUTS_FOLDER, 'scaler_y.pkl'))
+    print("已加载 scaler_y.pkl")
+
     best_params = optimize_hyperparameters(X_train, y_train)
 
     trained_model, prediction_results = train_neural_network_model(
         X_train, y_train, 
         X_test, y_test,
-        hidden_layer_sizes=best_params['hidden_layer_sizes'], # 使用调优得到的神经元数
-        alpha=best_params['alpha'],
+        scaler_y=scaler_y,  
+        hidden_layer_sizes=best_params['hidden_layer_sizes'],
         random_state=RANDOM_STATE
     )
     

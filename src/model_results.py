@@ -8,23 +8,23 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error, mean_absolute_percentage_error
 from scipy.stats import pearsonr
 from sklearn.model_selection import GridSearchCV
-import joblib  # 用于保存模型
+import joblib  
 import scienceplots
 
 def optimize_hyperparameters(X_train, y_train, random_state=RANDOM_STATE):
-    """寻找最优的隐藏层神经元数量和alpha值"""
+    """寻找最优的隐藏层神经元数量"""
 
     print("开始超参数调优...")
 
     param_grid = {
-        'hidden_layer_sizes': [(3,), (4,), (5,), (6,), (8,)],  
-        'alpha': [0.1, 0.5, 1.0, 2.0, 5.0]     
+        'hidden_layer_sizes': [(i,) for i in range(1, 21)],  # 从1到20
+        'alpha': [0.1, 0.5, 1.0, 2.0, 5.0]
     }
 
     mlp = MLPRegressor(
         activation='tanh',
         solver='lbfgs',
-        max_iter=2000,          # 调优时给多一点迭代次数
+        max_iter=2000,
         early_stopping=True,    
         validation_fraction=0.2,
         n_iter_no_change=10,
@@ -50,18 +50,14 @@ def optimize_hyperparameters(X_train, y_train, random_state=RANDOM_STATE):
 
     return grid_search.best_params_
 
-def train_neural_network_model(X_train, y_train, X_test, y_test, hidden_layer_sizes=HIDDEN_LAYER_SIZES, alpha=0.5, max_iter=MAX_ITER,random_state=RANDOM_STATE):
+def train_neural_network_model(X_train, y_train, X_test, y_test, scaler_y, 
+                                hidden_layer_sizes=HIDDEN_LAYER_SIZES, 
+                                alpha=0.5, max_iter=MAX_ITER, random_state=RANDOM_STATE):
     """
     训练前馈神经网络模型
     
-    参数:
-        X_train: 训练集特征
-        y_train: 训练集目标值
-        X_test: 测试集特征
-        y_test: 测试集目标值
-        hidden_layer_sizes: 隐藏层结构，例如 (10,) 表示1个隐藏层,10个神经元
-        max_iter: 最大训练轮数
-        random_state: 随机种子
+    新增参数:
+        scaler_y: 用于反归一化 y 的 MinMaxScaler 对象
     """
 
     print("开始训练神经网络模型...")
@@ -92,22 +88,29 @@ def train_neural_network_model(X_train, y_train, X_test, y_test, hidden_layer_si
     )
 
     print("开始训练...")
-    
     model.fit(X_train_split, y_train_split)
     
     print("训练完成！")
     print(f"实际训练轮数: {model.n_iter_}")
     
-    y_train_pred = model.predict(X_train_split)
-    y_val_pred = model.predict(X_val)
-    y_test_pred = model.predict(X_test)
+    y_train_pred_scaled = model.predict(X_train_split)
+    y_val_pred_scaled = model.predict(X_val)
+    y_test_pred_scaled = model.predict(X_test)
     
-    y_all_true = np.concatenate([y_train_split, y_val, y_test])
+    # 反归一化
+    y_train_pred = scaler_y.inverse_transform(y_train_pred_scaled.reshape(-1, 1)).ravel()
+    y_val_pred = scaler_y.inverse_transform(y_val_pred_scaled.reshape(-1, 1)).ravel()
+    y_test_pred = scaler_y.inverse_transform(y_test_pred_scaled.reshape(-1, 1)).ravel()
+    
+    y_train_split_original = scaler_y.inverse_transform(y_train_split.values.reshape(-1, 1)).ravel()
+    y_val_original = scaler_y.inverse_transform(y_val.values.reshape(-1, 1)).ravel()
+    y_test_original = scaler_y.inverse_transform(y_test.values.reshape(-1, 1)).ravel()
+    
+    y_all_true = np.concatenate([y_train_split_original, y_val_original, y_test_original])
     y_all_pred = np.concatenate([y_train_pred, y_val_pred, y_test_pred])
     
     def calculate_metrics(y_true, y_pred, dataset_name):
         """计算评估指标"""
-
         r2 = r2_score(y_true, y_pred)
         r, _ = pearsonr(y_true, y_pred)
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
@@ -119,37 +122,37 @@ def train_neural_network_model(X_train, y_train, X_test, y_test, hidden_layer_si
         print(f"  - R (相关系数):         {r:.4f}")
         print(f"  - RMSE (均方根误差):    {rmse:.4f}")
         print(f"  - MAE (平均绝对误差):   {mae:.4f}")
-        print(f"  - MAPE (平均绝对百分比误差): {mape:.3f}%")
+        print(f"  - MAPE (平均绝对百分比误差): {mape * 100:.3f}%")
         
         return r2, r, rmse, mae, mape
     
     print("模型性能评估:")
     
-    train_metrics = calculate_metrics(y_train_split, y_train_pred, "训练集")
-    val_metrics = calculate_metrics(y_val, y_val_pred, "验证集")
-    test_metrics = calculate_metrics(y_test, y_test_pred, "测试集")
+    train_metrics = calculate_metrics(y_train_split_original, y_train_pred, "训练集")
+    val_metrics = calculate_metrics(y_val_original, y_val_pred, "验证集")
+    test_metrics = calculate_metrics(y_test_original, y_test_pred, "测试集")
     all_metrics = calculate_metrics(y_all_true, y_all_pred, "全部数据")
 
     joblib.dump(model, os.path.join(OUTPUTS_FOLDER, 'trained_neural_network_model.pkl'))
     print("模型已保存为 'trained_neural_network_model.pkl'")
     
-    y_train_full_pred = model.predict(X_train)
+    y_train_full_pred_scaled = model.predict(X_train)
+    y_train_full_pred = scaler_y.inverse_transform(y_train_full_pred_scaled.reshape(-1, 1)).ravel()
     
     pd.DataFrame(y_train_full_pred, columns=['pIC50_predicted']).to_csv(
         os.path.join(OUTPUTS_FOLDER, 'y_train_predictions.csv'), index=False)
-    print(" 训练集预测结果已保存为 'y_train_predictions.csv'")
+    print("训练集预测结果已保存为 'y_train_predictions.csv'")
     
     pd.DataFrame(y_test_pred, columns=['pIC50_predicted']).to_csv(
         os.path.join(OUTPUTS_FOLDER, 'y_test_predictions.csv'), index=False)
-    print(" 测试集预测结果已保存为 'y_test_predictions.csv'")
+    print("测试集预测结果已保存为 'y_test_predictions.csv'")
     
-    # 同时保存用于绘图的详细数据
     results_dict = {
-        'y_train_split': y_train_split,
+        'y_train_split': y_train_split_original,
         'y_train_pred': y_train_pred,
-        'y_val': y_val,
+        'y_val': y_val_original,
         'y_val_pred': y_val_pred,
-        'y_test': y_test,
+        'y_test': y_test_original,
         'y_test_pred': y_test_pred
     }
     joblib.dump(results_dict, os.path.join(OUTPUTS_FOLDER, 'prediction_results.pkl'))
@@ -331,13 +334,16 @@ if __name__ == "__main__":
     X_test = pd.read_csv(os.path.join(DATA_FOLDER, 'X_test.csv'))
     y_test = pd.read_csv(os.path.join(DATA_FOLDER, 'y_test.csv')).squeeze("columns")
 
+    scaler_y = joblib.load(os.path.join(OUTPUTS_FOLDER, 'scaler_y.pkl'))
+    print("已加载 scaler_y.pkl")
+
     best_params = optimize_hyperparameters(X_train, y_train)
 
     trained_model, prediction_results = train_neural_network_model(
         X_train, y_train, 
         X_test, y_test,
-        hidden_layer_sizes=best_params['hidden_layer_sizes'], # 使用调优得到的神经元数
-        alpha=best_params['alpha'],
+        scaler_y=scaler_y,  
+        hidden_layer_sizes=best_params['hidden_layer_sizes'],
         random_state=RANDOM_STATE
     )
     

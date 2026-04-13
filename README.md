@@ -11,7 +11,7 @@
 1.  **QSAR 建模 (Python):本项目基于 Python 生态完整复现了上述研究的核心流程，相比原文献所用软件工具，全程采用 Python 开源库实现可复现、可扩展的分析流程，核心环节如下：**
     *   **数据准备**: 从SMILES表达式开始。
     *   **化学描述符计算**: 替代 PaDEL-Descriptor 软件，通过 RDKit 库批量计算 200 + 分子描述符。
-    *   **数据预处理**: 基于 Scikit-learn 实现缺失值过滤、异常值处理、Z-score 标准化及数据集划分。
+    *   **数据预处理**: 基于 Scikit-learn 实现归一化及数据集划分。
     *   **模型构建与优化**:
         *   利用 PCA（主成分分析）完成特征降维，结合 Matplotlib/SciencePlots 实现得分图、贡献率雷达图、特征载荷图可视化。
         *   构建前馈神经网络 (Feedforward Neural Network) 回归模型。
@@ -63,8 +63,6 @@
 └── README.md
 ```
 
-## 🏃 如何运行 (Usage)
-
 ## ⚙️ 如何运行 (Usage)
 
 本项目包含两个主要部分：QSAR建模和分子对接。请按顺序执行。
@@ -74,8 +72,8 @@
 1.  **环境配置**:
     ```bash
     # 克隆仓库
-    git clone https://github.com/[你的用户名]/[你的仓库名].git
-    cd [你的仓库名]
+    git clone https://github.com/Liu/alpha-amylase-inhibitor-QSAR.git
+    cd alpha-amylase-inhibitor-QSAR
 
     # 创建并激活虚拟环境
     python -m venv venv
@@ -131,27 +129,44 @@ vina --config autodock/conf_native.txt --out autodock/output_native.pdbqt > auto
 **d. 结果分析与可视化**
 
 **重对接验证 (Redocking)**: 在PyMOL中加载受体、原始配体和重对接后的配体构象。通过`align`命令计算RMSD值（本文献复现值为1.388 Å），并渲染生成对比图。
-**相互作用分析**: 使用Discovery Studio Visualizer (DSV) 或PyMOL，分析对接后配体与受体活性位点残基的相互作用（如氢键、疏水作用等），并生成2D和3D相互作用图。
+**分子对接结果图**: 使用Discovery Studio Visualizer (DSV) 或PyMOL，分析对接后配体与受体活性位点残基的相互作用（如氢键、疏水作用等），并生成2D和3D相互作用图。
 
 
 ## 📊 复现结果 (Results)
 
 ### QSAR 模型性能
 
-**1. 神经网络模型拟合结果 **
-*   训练集 R²: `0.9977` 
-*   验证集 R²: `0.3251` 
-*   测试集 R: `0.4466` 
+**1. 神经网络模型拟合结果**
+*   训练集 R: `0.8551` (原文: 0.79999)
+*   验证集 R: `0.9225` (原文: 0.88458)
+*   测试集 R: `0.8279` (原文: 0.86475)
+*   整体数据 R: `0.8180` (原文: 0.74536)
 
-![模型拟合图](results/figures/model_fit_plot.png)
-*(请将 `model_fit_plot.png` 替换为你生成的图片文件名)*
+具体图表见 results\figures\regression_performance.png
 
-**2. 测试集预测结果与实验值对比 (对应原文 Figure 5)**
+**2. 测试集预测结果与实验值对比**
 
-![预测-实验值对比图](results/figures/prediction_vs_actual_plot.png)
-*(请将 `prediction_vs_actual_plot.png` 替换为你生成的图片文件名)*
+具体图表见 results\figures\actual_vs_predicted.png
 
-*`[这里可以添加更多你认为重要的结果或与原文的对比分析]`*
+**3. 测试集预测结果**
+
+具体图表见 results\figures\test_predictions_table.png
+
+### 分子对接结果
+
+本项目复现了候选化合物与靶蛋白活性位点的对接。
+
+**对接得分 (Binding Affinity)**:
+| 化合物 | 复现得分 (kcal/mol) | 原文得分 (kcal/mol) |
+| :----: | :------------------: | :------------------: |
+|   N1   |       `-8.506`       |         -9.2         |
+|   N3   |       `-8.685`       |         -9.1         |
+|   N11  |       `-8.010`       |         -8.0         |
+
+**分子对接结果图 (2D、3D)**:
+
+展示了化合物与靶蛋白活性位点的相互作用，包括氢键、疏水作用等。
+
 
 ## 📄 引用 (Citation)
 
@@ -160,12 +175,8 @@ vina --config autodock/conf_native.txt --out autodock/output_native.pdbqt > auto
 Zhang, Y.-K., Tong, J.-B., Chang, Z.-L., Yan, J., Xing, X.-Y., Yang, Y.-L., & Xue, Z. (2025). QSAR Modeling of Pyridone Derivatives as α-amylase Inhibitors Using Chemical Descriptors and Machine Learning. ChemistrySelect, 10(4), e202404214. https://doi.org/10.1002/slct.202404214
 ```
 
-## 📜 许可证 (License)
-
-本项目采用 [MIT License](LICENSE.txt) 授权。
-
 ## 📧 联系方式 (Contact)
 
-[你的名字] - [你的邮箱]
+Liu - 18394599982@163.com
 
-项目链接: [https://github.com/[你的GitHub用户名]/[你的仓库名]](https://github.com/[你的GitHub用户名]/[你的仓库名])
+项目链接: [https://github.com/77hanah/alpha-amylase-inhibitor-QSAR](https://github.com/77hanah/alpha-amylase-inhibitor-QSAR)

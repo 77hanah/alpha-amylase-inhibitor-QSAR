@@ -3,6 +3,6 @@ FIGURES_FOLDER = "results/figures"
 OUTPUTS_FOLDER = "results/outputs"
 SMILES_FILE = 'SMILES.csv'
 SMILES_COLUMN = 'Compounds SMILES formula'
-RANDOM_STATE = 42
+RANDOM_STATE = 12
 MAX_ITER = 1000
 HIDDEN_LAYER_SIZES = (5,)
