@@ -1,7 +1,7 @@
 src/__pycache__/
 *.csv
 !SMILES.csv
-!new_SMILES.csv
+!new_compounds.csv
 results/
 a淀粉酶.pdf
 autodock/*
