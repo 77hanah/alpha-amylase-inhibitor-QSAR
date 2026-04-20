@@ -20,7 +20,13 @@
         *   蒙特卡洛模型适用域评估 (Monte Carlo Model Applicability Domain Evaluation)。
         *   Y-随机化测试 (Y-randomization Test)。
 
-2.  **分子对接 (AutoDock Vina & Discovery Studio)**:
+2.  **设计新分子**
+    *   保持吡啶酮骨架，在zinc 15数据库中基于PCA分析选择相似片段，设计了23种新化合物，并预测其活性。
+
+3.  **SwissADME 特征预测**
+    *   评估高活性候选化合物的ADME特性，筛选出具有良好ADME特性的候选分子。
+  
+4.  **分子对接 (AutoDock Vina & Discovery Studio)**:
     *   对原文中提出的高活性候选化合物 (N1, N3, N11) 进行准备。
     *   将其与靶蛋白 α-淀粉酶 (PDB: 3BAJ) 进行分子对接，评估结合亲和力。
     *   可视化并分析对接构象，验证其与活性位点关键氨基酸的相互作用。
@@ -34,6 +40,7 @@
 
 *   **化学信息学 & 分子对接**:
     *   RDKit  (描述符计算)
+    *   SwissADME (ADME特征预测)
     *   AutoDock Vina (分子对接)
     *   PyMOL(重对接可视化)
     *   Discovery Studio Visualizer (结果可视化)
@@ -58,6 +65,7 @@
 │   ├── main.py                   # 主运行脚本，整合所有步骤  
 │   ├── model_results.py          # 模型训练与评估
 │   ├── PCA.py                    # PCA分析与可视化
+│   ├── predict_new_compounds.py  # 新化合物活性预测
 │   └── y_randomation_evaluate.py # Y-随机化测试
 ├── requirements.txt              # 项目依赖
 └── README.md
@@ -96,13 +104,23 @@
 
 #### 1. 软件准备
 
+*   **ADME预测**: [SwissADME](https://www.swiss-adme.ch/)
 *   **对接引擎**: [AutoDock Vina](http://vina.scripps.edu/download.html)
 *   **文件准备**: [MGLTools](http://mgltools.scripps.edu/downloads) 或 [Open Babel](https://open-babel.readthedocs.io/en/latest/index.html)
 *   **结构优化与可视化**: [PyMOL](https://pymol.org/2/) 或 [Discovery Studio Visualizer (DSV)](https://www.3ds.com/products-services/biovia/products/molecular-modeling-simulation/biovia-discovery-studio/visualization/)
 
 #### 2. 工作流程概述
 
-**a. 受体与配体的准备**
+**a. 新设计化合物的活性预测**
+    直接运行 `main.py` 脚本后，预测结果将保存在 `results/outputs/new_compounds_predicted.csv` 中。
+    ```bash
+    python src/predict_new.py
+    ```
+
+**b.ADME特性预测**
+    访问 [SwissADME](https://www.swiss-adme.ch/)，输入高活性候选化合物的SMILES字符串，获取其ADME特性评估结果。
+
+**c. 受体与配体的准备**
 
 *   **受体 (Receptor)**: 从PDB数据库获取α-淀粉酶结构 (`PDB ID: 3BAJ`)。使用PyMOL分离蛋白链，加氢后保存为 `receptor.pdb`。随后将其转换为 `receptor.pdbqt` 格式。
 
@@ -113,12 +131,12 @@
     ```
 *   **原始配体 (Native Ligand)**: 从 `3BAJ` 晶体结构中提取原始配体，按上述类似流程处理为 `native_ligand.pdbqt`。
 
-**b. 定义对接盒子 & 创建配置文件**
+**d. 定义对接盒子 & 创建配置文件**
 
 *   采用**共晶结构法**，以原始配体在晶体结构中的位置为中心，定义对接盒子（Grid Box）的中心和尺寸。
-*   为每个对接任务创建独立的Vina配置文件 (`conf_native.txt`, `conf_N1.txt` 等)，指定受体、配体和对接盒子参数。这些文件已保存在 `autodock/` 中。
+*   为每个对接任务创建独立的Vina配置文件 (`conf_native.txt`, `conf_*.txt` 等)，指定受体、配体和对接盒子参数。这些文件已保存在 `autodock/` 中。
 
-**c. 运行Vina对接**
+**e. 运行Vina对接**
 
 在`autodock/`目录下，通过命令行调用Vina执行对接。对接得分和日志将输出到 `.txt` 文件。
 
@@ -126,7 +144,7 @@
 # 示例：运行原始配体的重对接验证
 vina --config autodock/conf_native.txt --out autodock/output_native.pdbqt > autodock/log_native.txt
 ```
-**d. 结果分析与可视化**
+**f. 结果分析与可视化**
 
 **重对接验证 (Redocking)**: 在PyMOL中加载受体、原始配体和重对接后的配体构象。通过`align`命令计算RMSD值（本文献复现值为1.388 Å），并渲染生成对比图。
 **分子对接结果图**: 使用Discovery Studio Visualizer (DSV) 或PyMOL，分析对接后配体与受体活性位点残基的相互作用（如氢键、疏水作用等），并生成2D和3D相互作用图。

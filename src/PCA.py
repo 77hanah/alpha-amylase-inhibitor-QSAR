@@ -81,7 +81,14 @@ def visualize_pca(pca_model, X_scaled, y_target=None):
     fig, ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(polar=True))
     ax.fill(angles, values, color='#87ceeb', alpha=0.3)
     ax.plot(angles, values, color='#1f77b4', linewidth=2, marker='o', markersize=3)
-    # 数值标签推荐手动加
+
+    # 数值标签
+    for angle, val, label in zip(angles[:-1], values[:-1], labels):
+        ax.text(
+            angle, val + 3,  # 位置：角度 + 数值向外偏移一点
+            f'{val:.1f}%',   # 显示格式：保留1位小数+百分号
+            ha='center', va='center', fontsize=14, color='#1f77b4', weight='bold'
+        )
     ax.set_thetagrids(np.degrees(angles[:-1]), labels, fontsize=14)     # 设置角度网格和标签
     ax.spines['polar'].set_color('grey')     # 设置极轴颜色
     ax.grid(color='grey')
