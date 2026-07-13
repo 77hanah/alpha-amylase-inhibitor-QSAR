@@ -3,8 +3,8 @@ src/__pycache__/
 !SMILES.csv
 !new_compounds.csv
 results/
-a淀粉酶.pdf
 autodock/*
 !autodock/conf_*.txt
 .vscode/
-*.docx
+附件/
+sql/qsar.db

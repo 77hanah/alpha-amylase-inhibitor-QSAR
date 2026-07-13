@@ -44,7 +44,11 @@
     *   AutoDock Vina (分子对接)
     *   PyMOL(重对接可视化)
     *   Discovery Studio Visualizer (结果可视化)
-    *   
+
+*   **SQL 数据分析**:
+    *   SQLite (数据库引擎)
+    *   标准 SQL (CTE, 窗口函数, 子查询, 聚合)
+    *   Python (CSV→SQL 数据转换)
 
 ## 🚀 项目结构 (Project Structure)
 
@@ -68,6 +72,11 @@
 │   ├── predict_new_compounds.py  # 新化合物活性预测
 │   └── y_randomation_evaluate.py # Y-随机化测试
 ├── requirements.txt              # 项目依赖
+├── sql/                          # SQL 数据分析
+│   ├── schema.sql                # 建表语句
+│   ├── seed.sql                  # 数据导入
+│   ├── analysis_queries.sql      # 分析查询
+│   └── views.sql                 # 分析视图
 └── README.md
 ```
 
@@ -148,6 +157,77 @@ vina --config autodock/conf_native.txt --out autodock/output_native.pdbqt > auto
 
 **重对接验证 (Redocking)**: 在PyMOL中加载受体、原始配体和重对接后的配体构象。通过`align`命令计算RMSD值（本文献复现值为1.388 Å），并渲染生成对比图。
 **分子对接结果图**: 使用Discovery Studio Visualizer (DSV) 或PyMOL，分析对接后配体与受体活性位点残基的相互作用（如氢键、疏水作用等），并生成2D和3D相互作用图。
+
+### Part 3: SQL 数据分析
+
+本项目有 32 个化合物的分子描述符、活性值（pIC₅₀）和 ADMET 属性数据，天然适合用 SQL 进行药物化学角度的分析和筛选。所有 SQL 文件位于 `sql/` 目录。
+
+#### 数据库设计
+
+```
+┌──────────────────────────┐       ┌──────────────────────────────┐
+│       compounds          │  1:1  │  molecular_descriptors       │
+│──────────────────────────│       │──────────────────────────────│
+│ compound_id      (PK)    │◄──────│ compound_id          (FK)    │
+│ compound_no              │       │ descriptor_id        (PK)    │
+│ smiles                   │       │ max_partial_charge           │
+│ pic50                    │       │ chi0, chi1, kappa1-3        │
+│ mw, mol_log_p            │       │ balaban_j, bertz_ct          │
+│ h_bond_donors/acceptors  │       │ peoe_vsa* (14 bins)          │
+│ tpsa, qed                │       │ slogp_vsa* (12 bins)         │
+│ is_recommended           │       │ bcut2d_*, fr_*               │
+└──────────────────────────┘       └──────────────────────────────┘
+```
+
+#### 七类分析查询 + 发现
+
+| 类型 | 查询 | 发现 |
+|------|------|------|
+| **WHERE 筛选** | Lipinski 五规则候选分子 | **30/32 通过（93.75%）**，仅 2 个 LogP 略超标 |
+| **GROUP BY 聚合** | 按分子量区间统计平均活性 | 活性与分子量正相关，>350 Da 组最高（pIC₅₀=4.611） |
+| **ORDER BY + LIMIT** | 活性 Top 10 排名 | Top 1: 化合物 13（pIC₅₀=5.04，MW=365.8 Da） |
+| **JOIN + CTE** | 描述符-活性关联分析 | 高活性组 Chi0=17.08 显著高于低活性组 15.09，分子复杂度与活性正相关 |
+| **窗口函数 RANK + NTILE** | 活性分层标记 | 11 高 + 11 中 + 10 低，分界清晰 |
+| **子查询** | 高活性 + ADMET 合格候选 | **16 个推荐候选分子**，可直接用于对接验证 |
+| **UPDATE + 事务** | 标记推荐候选入库 | 以事务方式更新 `is_recommended` 字段 |
+
+**关键发现：活性与类药性存在 trade-off**
+- 高活性组平均 QED=0.648，低活性组平均 QED=0.782
+- 即类药性最好的分子活性反而偏低 —— 药物设计中需平衡这两个指标
+
+#### 分析视图 (Views)
+
+将常用分析固化为 4 个视图，方便复用：
+
+```sql
+-- 符合 Lipinski 五规则的候选分子
+CREATE VIEW v_lipinski_candidates AS ...;
+
+-- 活性 Top 10 化合物  
+CREATE VIEW v_top10_activity AS ...;
+
+-- 推荐候选分子（高活性 + ADMET 合格）
+CREATE VIEW v_recommended_candidates AS ...;
+
+-- 按活性分层的化合物统计
+CREATE VIEW v_activity_tiers AS ...;
+```
+
+```bash
+# 使用示例
+sqlite3 qsar.db "SELECT * FROM v_recommended_candidates;"
+sqlite3 qsar.db "SELECT activity_tier, COUNT(*) FROM v_activity_tiers GROUP BY activity_tier;"
+```
+
+#### 运行方式
+
+```bash
+cd sql
+sqlite3 qsar.db < schema.sql        # 建表
+sqlite3 qsar.db < seed.sql          # 导入数据
+sqlite3 qsar.db < analysis_queries.sql  # 运行分析
+sqlite3 qsar.db < views.sql         # 创建视图
+```
 
 
 ## 📊 复现结果 (Results)
